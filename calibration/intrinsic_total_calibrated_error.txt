@@ -1,0 +1,5 @@
+total calibration error: 0.012067624287247194 intrinsics_hik_calibration.json
+
+total calibration error: 0.012022792939550633 intrinsics_60gm_calibration.json!
+
+total calibration error: 0.008596083503182817 total calibration error: intrinsics_60gc_calibration.json

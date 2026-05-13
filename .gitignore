@@ -1,0 +1,8 @@
+captures/
+venv/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+calibration_img_sets/
+internetconfig.xlsx
