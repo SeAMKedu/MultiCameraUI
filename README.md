@@ -1,5 +1,5 @@
 # SEAMK Multi Camera GUI
-[![DOI](https://zenodo.org/badge/1229790702.svg)](https://doi.org/10.5281/zenodo.20281561)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20281561.svg)](https://doi.org/10.5281/zenodo.20281561)
 
 A centralized industrial camera management and control system supporting both Basler and Hikrobot camera series. The project provides Live View capabilities, lens calibration, synchronized photo/video capture, and transmission bandwidth optimization.
 
