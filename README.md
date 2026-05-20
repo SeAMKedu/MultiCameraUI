@@ -1,5 +1,5 @@
 # SEAMK Multi Camera GUI
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20281561.svg)](https://doi.org/10.5281/zenodo.20281561)
+[![DOI](https://zenodo.org/badge/1229790702.svg)](https://doi.org/10.5281/zenodo.20281561)
 
 A centralized industrial camera management and control system supporting both Basler and Hikrobot camera series. The project provides Live View capabilities, lens calibration, synchronized photo/video capture, and transmission bandwidth optimization.
 
@@ -109,6 +109,6 @@ Import the 03 `.mfa` configuration files from the **`user_set_2`** folder into t
 
 *Developed for the Vision system at SeAMK in 3DLaatu.AI project funded by Hehku foundation.*
 
-![alt text](https://github.com/SeAMKedu/MultiCameraUI/tree/main/SeAMK_Vision_Project/widgets/logo.png?raw=true)
-![alt text](https://hehkusaatio.fi/wp-content/uploads/Hehku-Toysan-spsaatio-logo.svg?raw=true)
+<img src="https://storage.googleapis.com/seamk-production/2025/03/8082dded-seamk_lila-logo_nimella_fi_eng-300x184.png" alt="SEAMK logo" height="100">
+<img src="https://hehkusaatio.fi/wp-content/uploads/Hehku-Toysan-spsaatio-logo.svg" alt="Hehku logo">
 
