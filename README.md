@@ -107,4 +107,8 @@ Import the 03 `.mfa` configuration files from the **`user_set_2`** folder into t
 
 ---
 
-*Developed for the Vision system at SeAMK.*
+*Developed for the Vision system at SeAMK in 3DLaatu.AI project funded by Hehku foundation.*
+
+![alt text](https://github.com/SeAMKedu/MultiCameraUI/tree/main/SeAMK_Vision_Project/widgets/logo.png?raw=true)
+![alt text](https://hehkusaatio.fi/wp-content/uploads/Hehku-Toysan-spsaatio-logo.svg?raw=true)
+
