@@ -64,7 +64,7 @@ pip install -r requirements.txt
 *This command automatically installs all necessary libraries such as PySide6, OpenCV, NumPy, etc.*
 
 **Step 3: Path Configuration**
-Open the `config.py` file in the project folder and ensure the path points to the correct `.cti` file on your machine:
+Open the `config.py` file in the `widget/utils` folder and ensure the path points to the correct `.cti` file on your machine:
 
 ```python
 import os
