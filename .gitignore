@@ -1,5 +1,5 @@
 captures/
-venv/
+multivenv/
 __pycache__/
 *.pyc
 .vscode/

@@ -75,6 +75,14 @@ HIKROBOT_CTI = os.path.join(HIKROBOT_BIN, 'MvProducerGEV.cti')
 
 ### 3. MVS Configuration
 
+## OPTION 1
+
+Open MVS, Go File -> Open and select 'final_stable_version.mcfg'.
+
+## OPTION 2
+
+If that does not work for some reason, follow the next two steps:
+
 **Import User Sets:**
 Import the 03 `.mfa` configuration files from the **`user_set_2`** folder into the MVS software to set the default hardware parameters for the cameras.
 
