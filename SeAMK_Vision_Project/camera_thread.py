@@ -1,7 +1,13 @@
 import numpy as np
 import cv2, os, time, json
+import logging
+from datetime import datetime
+from genicam import genapi
 from PySide6.QtCore import QThread, Signal
 from calibration_functions import undistort_image, get_undistort_map, fast_undistort_image
+
+logger = logging.getLogger(__name__)
+
 
 class CameraThread(QThread):
     change_pixmap_signal = Signal(np.ndarray) 
@@ -10,6 +16,11 @@ class CameraThread(QThread):
         super().__init__()
         self.ia = ia
         self.info = info
+        # DeviceInfo properties query GenTL and become invalid after reset.
+        self.vendor_name = str(info.vendor)
+        self.model_name = str(info.model)
+        self.device_id = str(info.id_)
+        self.camera_label = f"{self.model_name} ({self.device_id})"
         self._run_flag = True
         
         self._is_paused = False       
@@ -45,27 +56,34 @@ class CameraThread(QThread):
         nodemap = self.ia.remote_device.node_map
         time.sleep(0.5)
         
-        vendor_name = str(self.info.vendor).lower()
-        model_name = str(self.info.model).lower()
+        vendor_name = self.vendor_name.lower()
+        model_name = self.model_name.lower()
 
         # --- SAFE PARAMETER SETTER FUNCTION ---
         def safe_set(node_name, value):
-            if node_name in dir(nodemap):
-                try:
-                    node = getattr(nodemap, node_name)
-                    if not node.is_writable(): 
-                        return
-                    
-                    if hasattr(node, 'selectors'):
-                        if isinstance(value, bool):
-                            node.value = "On" if value else "Off"
-                        else:
-                            try: node.value = value
-                            except: node.value = str(value)
-                    else:
-                        node.value = value
-                except:
-                    pass
+            if node_name not in dir(nodemap):
+                return
+            try:
+                node = getattr(nodemap, node_name)
+                if not genapi.is_writable(node):
+                    logger.warning("%s: %s is not writable", self.camera_label, node_name)
+                    return
+
+                # Vendors expose some settings as enums instead of numbers.
+                if isinstance(node, genapi.IEnumeration):
+                    if isinstance(value, bool):
+                        value = "On" if value else "Off"
+                    elif not isinstance(value, str):
+                        numeric_symbol = str(value)
+                        named_symbol = f"{node_name}{value}"
+                        value = (named_symbol if named_symbol in node.symbolics
+                                 else numeric_symbol)
+                node.value = value
+            except Exception:
+                logger.warning(
+                    "%s: could not set %s to %r",
+                    self.camera_label, node_name, value, exc_info=True,
+                )
 
         # --- 1. BASIC INITIALIZATION (Common) ---
         safe_set("ExposureAuto", "Off")
@@ -73,7 +91,9 @@ class CameraThread(QThread):
         safe_set("BinningHorizontal", 1)
         safe_set("BinningVertical", 1)
         safe_set("GammaEnable", False) # Always disable Gamma for optimal raw color processing
-        safe_set("BalanceWhiteAuto", "Off")
+        # The Basler mono models have no white balance control.
+        if "60gm" not in model_name:
+            safe_set("BalanceWhiteAuto", "Off")
         # --- 2. DETAILED CONFIGURATION BY CAMERA TYPE ---
         safe_set("GevSCPSPacketSize", 8164)
         time.sleep(0.2)
@@ -154,11 +174,15 @@ class CameraThread(QThread):
 
         # --- 3. ACQUISITION AND IMAGE PROCESSING LOOP ---
         try:
+            if not self._run_flag:
+                return
             self.ia.start()
             while self._run_flag:
                 try:
                     # FETCH: Get raw data and copy quickly to release network buffer
-                    with self.ia.fetch(timeout=2.0) as buffer:
+                    with self.ia.fetch(timeout=0.5) as buffer:
+                        if not self._run_flag:
+                            break
                         if self._is_paused:
                             continue 
 
@@ -170,7 +194,9 @@ class CameraThread(QThread):
                         bytes_per_pixel = len(raw_data) // (w * h)
 
                 except Exception as e:
-                    print(f"⚠️ [Signal Lost] {self.info.model}: {type(e).__name__}")
+                    if not self._run_flag:
+                        break
+                    print(f"⚠️ [Signal Lost] {self.camera_label}: {type(e).__name__}")
                     time.sleep(0.05)
                     continue 
 
@@ -224,7 +250,7 @@ class CameraThread(QThread):
                     self.change_pixmap_signal.emit(preview_rgb)
                     
                 except Exception as e:
-                    print(f"OpenCV Error ({self.info.model}): {e}")
+                    print(f"OpenCV Error ({self.camera_label}): {e}")
 
         finally:
             self.stop_recording()
@@ -233,15 +259,28 @@ class CameraThread(QThread):
 
     # --- UTILITY FUNCTIONS ---
     def take_snapshot(self, folder, name):
-        if self.last_full_frame is not None:
+        frame = self.last_full_frame
+        if frame is None:
+            logger.warning("%s: snapshot skipped; no frame received yet", self.camera_label)
+            return None
+        try:
+            folder = os.path.abspath(folder)
             os.makedirs(folder, exist_ok=True)
-            path = os.path.join(folder, f"{name}_{int(time.time()*1000)}.jpg")
-            cv2.imwrite(path, self.last_full_frame)
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+            path = os.path.join(folder, f"{name}_{timestamp}.jpg")
+            if not cv2.imwrite(path, frame):
+                raise OSError(f"OpenCV could not write {path}")
+        except Exception:
+            logger.exception("%s: snapshot save failed", self.camera_label)
+            return None
+        print(f"Snapshot saved ({self.camera_label}): {path}")
+        return path
 
     def start_recording(self, folder, name, fps):
         if self.last_full_frame is None: return
         os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, f"{name}_{int(time.time())}.mp4")
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        path = os.path.join(folder, f"{name}_{timestamp}.mp4")
         h, w = self.last_full_frame.shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
         self.video_writer = cv2.VideoWriter(path, cv2.CAP_FFMPEG, fourcc, fps, (w, h), isColor=True)
@@ -263,7 +302,7 @@ class CameraThread(QThread):
             self.is_calibrated = True
             self.mapx = None 
             self.mapy = None
-            print(f"Calibration file loaded for {self.info.model}")
+            print(f"Calibration file loaded for {self.camera_label}")
             return True
         except Exception as e:
             print(f"JSON Load Error: {e}")
@@ -273,6 +312,11 @@ class CameraThread(QThread):
     def toggle_undistort(self, state):
         self.enable_undistort = state
         
-    def stop(self):
+    def request_stop(self):
         self._run_flag = False
-        self.wait(2000)
+
+    def stop(self):
+        self.request_stop()
+        # The worker owns acquisition until its finally block has completed.
+        # Never destroy its handles just because a timed wait expired.
+        self.wait()

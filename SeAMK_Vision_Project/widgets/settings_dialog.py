@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QDialog, QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QFileDialog, QComboBox
 import re
+from genicam import genapi
 
 class SettingsDialog(QDialog):
     def __init__(self, ia, config, is_dir_locked=False, parent=None):
@@ -159,10 +160,18 @@ class SettingsDialog(QDialog):
                     numbers = re.findall(r'\d+', self.binning_input.text())
                     if numbers:
                         val = int(numbers[0])
-                        if "BinningHorizontal" in nodes: nodemap.BinningHorizontal.value = val
-                        if "BinningVertical" in nodes: nodemap.BinningVertical.value = val
+                        for node_name in ("BinningHorizontal", "BinningVertical"):
+                            if node_name in nodes:
+                                node = getattr(nodemap, node_name)
+                                if not genapi.is_writable(node):
+                                    continue
+                                value = val
+                                if isinstance(node, genapi.IEnumeration):
+                                    symbol = f"{node_name}{val}"
+                                    value = symbol if symbol in node.symbolics else str(val)
+                                node.value = value
                 except Exception as e:
-                    pass
+                    print(f"Error writing Binning: {e}")
             
         except Exception as e:
             print(f"Settings System Error: {e}")

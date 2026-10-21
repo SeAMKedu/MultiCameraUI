@@ -134,8 +134,13 @@ class MainApp(QMainWindow):
         for p in self.previews: p.stop_local_snap()
 
     def closeEvent(self, event):
-        for t in self.threads: t._run_flag = False
-        for t in self.threads: t.wait(1500)
+        self.stop_global_snap()
+        # Request all stops first so blocked fetches can finish concurrently.
+        for t in self.threads:
+            t.request_stop()
+        for t in self.threads:
+            t.stop()
+        # All workers have now stopped acquisition and released their buffers.
         for ia in self.acquirers:
             try: ia.destroy()
             except: pass

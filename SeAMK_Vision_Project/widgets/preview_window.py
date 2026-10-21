@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, Signal, Slot, QTimer
 from PySide6 import QtGui
 import numpy as np
 import json
+import re
 from widgets.utils import config
 
 # Absolute imports to prevent errors
@@ -28,9 +29,20 @@ class PreviewWindow(QGroupBox):
         self.camera_thread = None 
         self.is_recording = False
         
+        # Serial numbers identify physical cameras independently of discovery order.
+        try:
+            camera_id = str(device_info.serial_number or "").strip()
+        except Exception:
+            camera_id = ""
+        if not camera_id:
+            camera_id = str(device_info.id_)
+        model = re.sub(r"[^\w.-]+", "_", str(device_info.model)).strip("._")
+        camera_id = re.sub(r"[^\w.-]+", "_", camera_id).strip("._")
+        self.setTitle(f"{device_info.model} ({camera_id})")
+
         self.config = {
             'save_dir': './captures',
-            'img_name': f"Cam_{device_info.model[:5]}",
+            'img_name': f"Cam_{model}_{camera_id}",
             'record_fps': 10.0
         }
 
